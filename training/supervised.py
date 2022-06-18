@@ -34,7 +34,7 @@ class Supervised(object):
         if os.path.exists(self.__pathStatistics) is False:
             os.makedirs(self.__pathStatistics)
 
-    def train(self, model, loss, optimizer="adam", learningRate=0.001, numberEpochs=10, batchSize=16):
+    def train(self, model, loss, optimizer="adam", learningRate=0.0000001, numberEpochs=10, batchSize=16):
         """
         Method to perform training
 
@@ -52,13 +52,14 @@ class Supervised(object):
         while(True):
             optim.zero_grad()
             x, y, finished = self.customDataloader(batchSize, numberEpochs)
-            print(len(x), len(y), finished)
             prediction = model(x)
 
             error = loss(prediction, y)
 
-            loss.backward()
+            error.backward()
             optim.step()
+
+            print("Loss : " + str(error))
 
             if finished:
                 break
