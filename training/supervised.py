@@ -68,7 +68,7 @@ class Supervised(object):
             os.makedirs(self.pathReports)
 
         self.__parametersFile = os.path.join(self.__pathParameters, self.__parametersName)
-        self.__parametersFileBackUp = os.path.join(self.__parametersFolder, self.__parametersNameBackUp)
+        self.__parametersFileBackUp = os.path.join(self.__pathParameters, self.__parametersNameBackUp)
 
     def saveModel(self, model):
         """
