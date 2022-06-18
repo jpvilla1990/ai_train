@@ -1,3 +1,4 @@
+import os
 import math
 from ai_train.training.supervised import Supervised
 from ai_dataloader.dataset.streetViewHouseNumbers import SVHN
@@ -10,6 +11,7 @@ class NumberRecognition(Supervised):
     Class that implements number recognition training
     """
     def __init__(self, path, scenario, desiredSizeImage=128):
+        Supervised.__init__(self, path, scenario)
         super().__init__(path, scenario)
 
         self.initialized = False
@@ -17,6 +19,13 @@ class NumberRecognition(Supervised):
         self.targetHeight = self.targetWidth
 
         self.__dataloader = SVHN(path)
+
+        lossFileName = "loss.txt"
+        lossFile = os.path.join(self.pathReports, lossFileName)
+        accuracyName = "accuracy.txt"
+        accuracyFile = os.path.join(self.pathReports, accuracyName)
+        self.reportFiles.update({"lossFile" : lossFile})
+        self.reportFiles.update({"accuracyFile" : accuracyFile})
 
     def normalization(self, x, y):
         """
@@ -139,3 +148,92 @@ class NumberRecognition(Supervised):
         torch.cat(batchSampleY, out=yTensor)
 
         return xTensor, yTensor, finished
+
+    def calculateAccuracy(self, y, prediction):
+        """
+        Method to calculate accuracy by calculating the intersection and dividing the union of the boxes
+        """
+        numberBatches = len(y)
+        accuracySum = 0.0
+        for index in range(numberBatches):
+            leftY = y[index][0]
+            rightY = y[index][1]
+            topY = y[index][2]
+            bottomY = y[index][3]
+
+            leftPrediction = prediction[index][0]
+            rightPrediction = prediction[index][1]
+            topPrediction = prediction[index][2]
+            bottomPrediction = prediction[index][3]
+
+            if (rightY < leftPrediction or rightPrediction < leftY or bottomY < topPrediction or bottomPrediction < topY):
+                accuracySum += 0.0
+            else:
+
+                horizontalCoordinates = [
+                    float(leftY),
+                    float(rightY),
+                    float(leftPrediction),
+                    float(rightPrediction),
+                ]
+                horizontalCoordinates.sort()
+
+                verticalCoordinates = [
+                    float(topY),
+                    float(bottomY),
+                    float(topPrediction),
+                    float(bottomPrediction),
+                ]
+                verticalCoordinates.sort()
+
+                horizontalDimensions = [
+                    (horizontalCoordinates[1] - horizontalCoordinates[0]),
+                    (horizontalCoordinates[2] - horizontalCoordinates[1]),
+                    (horizontalCoordinates[3] - horizontalCoordinates[2]),
+                ]
+
+                verticalDimensions = [
+                    (verticalCoordinates[1] - verticalCoordinates[0]),
+                    (verticalCoordinates[2] - verticalCoordinates[1]),
+                    (verticalCoordinates[3] - verticalCoordinates[2]),
+                ]
+
+                regionsOut = [
+                    horizontalDimensions[0] * verticalDimensions[0],
+                    horizontalDimensions[0] * verticalDimensions[1],
+                    horizontalDimensions[1] * verticalDimensions[0],
+                    horizontalDimensions[1] * verticalDimensions[2],
+                    horizontalDimensions[2] * verticalDimensions[2],
+                ]
+                regionIn =  horizontalDimensions[1] * verticalDimensions[1]
+
+                accuracySum += (regionIn) / (regionIn + sum(regionsOut))
+        return accuracySum / numberBatches
+
+    def saveLoss(self, loss):
+        """
+        Method to save the loss in a txt file
+
+        loss : tensor
+        """
+        lossFile = open(self.reportFiles["lossFile"], "a+")
+        lossFile.write(str(float(loss)) + "\n")
+        lossFile.close()
+
+    def saveAccuracy(self, accuracy):
+        """
+        Method to save the accuracy in a txt file
+        """
+        accuracyFile = open(self.reportFiles["accuracyFile"], "a+")
+        accuracyFile.write(str(float(accuracy)) + "\n")
+        accuracyFile.close()
+
+    def reporting(self, y, prediction, loss):
+        """
+        Custom implementation of reporting
+        """
+        self.saveLoss(loss)
+        accuracy = self.calculateAccuracy(y, prediction)
+        print("Accuracy: " + str(accuracy))
+        self.saveAccuracy(accuracy)
+
