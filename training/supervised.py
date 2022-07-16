@@ -8,10 +8,11 @@ class Supervised(object):
     path : String -> Location where training workspace is located
     scenario : String -> sub folder in the workspace to store difference training instance
     """
-    def __init__(self, path, scenario):
+    def __init__(self, path, scenario, model):
 
         self.__parametersFolder = "parameters"
         self.reports = "reports"
+        self.__model = model
 
         self.__parametersName = "parameters.pth"
         self.__parametersNameBackUp = "parametersBackUp.pth"
@@ -107,7 +108,7 @@ class Supervised(object):
         batchSize : int
         """
         loss = loss
-        model = self.loadModel(model)
+        model = self.loadModel(self.__model)
         model.train()
         if optimizer == "adam":
             optim = torch.optim.Adam(model.parameters(), lr=learningRate)
@@ -133,13 +134,13 @@ class Supervised(object):
             if finished:
                 break
 
-    def test(self, model):
+    def test(self):
         """
         Method to perform test
 
         model : Model torch.nn.Module
         """
-        model = self.loadModel(model)
+        model = self.loadModel(self.__model)
         model.eval()
 
         n = 0
@@ -163,6 +164,16 @@ class Supervised(object):
             if finished:
                 break
         print("Total Accuracy : " + str(totalAccuracy / n))
+
+    def predict(self, x):
+        """
+        Method to perform a prediction with the trained model
+        """
+        model = self.loadModel(self.__model)
+        model.eval()
+        x = self.__checkCuda(x)
+
+        return model(x)
 
     def resetTraining(self):
         """
