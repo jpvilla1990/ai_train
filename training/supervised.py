@@ -108,6 +108,7 @@ class Supervised(object):
         """
         loss = loss
         model = self.loadModel(model)
+        model.train()
         if optimizer == "adam":
             optim = torch.optim.Adam(model.parameters(), lr=learningRate)
 
@@ -132,6 +133,37 @@ class Supervised(object):
             if finished:
                 break
 
+    def test(self, model):
+        """
+        Method to perform test
+
+        model : Model torch.nn.Module
+        """
+        model = self.loadModel(model)
+        model.eval()
+
+        n = 0
+        totalAccuracy = 0
+
+        while(True):
+            x, y, finished = self.customDataloader(batchSize=1, numberEpochs=1, train=False)
+            x = self.__checkCuda(x)
+            y = self.__checkCuda(y)
+
+            prediction = model(x)
+
+            self.saveModel(model)
+            accuracy = self.calculateAccuracy(y, prediction)
+
+            totalAccuracy += accuracy
+            n += 1
+
+            print("Accumulated Accuracy : " + str(totalAccuracy / n))
+
+            if finished:
+                break
+        print("Total Accuracy : " + str(totalAccuracy / n))
+
     def resetTraining(self):
         """
         Method to reset training, erases the parameters and reporting files
@@ -142,11 +174,13 @@ class Supervised(object):
             except:
                 pass
 
-    def customDataloader(self, batchSize, epochs):
+    def customDataloader(self, batchSize, numberEpochs, train=True):
         """
         Overridable Public Method to implement dataloader
 
         batchSize : int
+        numberEpochs : int
+        train : bool
 
         return list of three elements -> tensors input, groundTruth with the batchSize included, boolean to indicate iterations are finished
         """
@@ -161,3 +195,12 @@ class Supervised(object):
         prediction : tensor prediction
         """
         raise Exception("reporting method not implemented yet, please implement it by overriding the method reporting using the public variable self.reports to store the data related to the training")
+
+    def calculateAccuracy(self, y, prediction):
+        """
+        Overridable Public Method to implement calculate Accuracy
+
+        y : tensor Ground truth
+        prediction : tensor prediction
+        """
+        raise Exception("calculateAccuracy method not implemented yet, please implement it by overriding the method calculateAccuracy")

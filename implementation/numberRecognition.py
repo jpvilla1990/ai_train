@@ -100,18 +100,23 @@ class NumberRecognition(Supervised):
 
         return x, y
 
-    def customDataloader(self, batchSize, numberEpochs):
+    def customDataloader(self, batchSize, numberEpochs, train=True):
         """
         Custom implementation custom dataloader
 
         batch x channels x height x width - left, right, top, bottom
         """
+        if train:
+            dataset = "train"
+        else:
+            dataset = "test"
+
         if self.initialized:
             pass
         else:
             self.epoch = 0
             self.batchIndex = 0
-            self.sizeDataset = self.__dataloader.getDatasetSize("train")
+            self.sizeDataset = self.__dataloader.getDatasetSize(dataset)
             self.numberBatches = math.floor(self.sizeDataset / batchSize)
             self.lastBatchSize = self.sizeDataset % batchSize
             self.extraLastBatch = False
@@ -126,7 +131,7 @@ class NumberRecognition(Supervised):
         batchSampleX = list()
         batchSampleY = list()
         for _ in range(batchSize):
-            sample = self.__dataloader.getRandomSample("train")
+            sample = self.__dataloader.getRandomSample(dataset)
             sample = self.samplesToTorch(sample[0], sample[1])
             batchSampleX.append(sample[0].unsqueeze(0))
             batchSampleY.append(sample[1].unsqueeze(0))
