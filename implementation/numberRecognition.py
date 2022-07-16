@@ -10,9 +10,9 @@ class NumberRecognition(Supervised):
     """
     Class that implements number recognition training
     """
-    def __init__(self, path, scenario, desiredSizeImage=128):
-        Supervised.__init__(self, path, scenario)
-        super().__init__(path, scenario)
+    def __init__(self, path, scenario, model, desiredSizeImage=128):
+        Supervised.__init__(self, path, scenario, model)
+        super().__init__(path, scenario, model)
 
         self.initialized = False
         self.targetWidth = desiredSizeImage

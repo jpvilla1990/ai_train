@@ -7,6 +7,7 @@ class Supervised(object):
 
     path : String -> Location where training workspace is located
     scenario : String -> sub folder in the workspace to store difference training instance
+    model : model
     """
     def __init__(self, path, scenario, model):
 
@@ -96,7 +97,7 @@ class Supervised(object):
 
         return model
 
-    def train(self, model, loss, optimizer="adam", learningRate=0.0000001, numberEpochs=10, batchSize=16):
+    def train(self, loss, optimizer="adam", learningRate=0.0000001, numberEpochs=10, batchSize=16):
         """
         Method to perform training
 
@@ -137,8 +138,6 @@ class Supervised(object):
     def test(self):
         """
         Method to perform test
-
-        model : Model torch.nn.Module
         """
         model = self.loadModel(self.__model)
         model.eval()
