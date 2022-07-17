@@ -4,6 +4,8 @@ from ai_train.training.supervised import Supervised
 from ai_dataloader.dataset.streetViewHouseNumbers import SVHN
 from ai_train.implementation.imageHandler import ImageHandler
 import torch
+import numpy as np
+from PIL import Image
 from torch.nn import functional
 
 class NumberRecognition(Supervised):
@@ -92,11 +94,6 @@ class NumberRecognition(Supervised):
         x = functional.interpolate(x.unsqueeze(0), size=(self.targetWidth, self.targetHeight)).squeeze(0).type(torch.DoubleTensor)
 
         x, y = self.normalization(x, y)
-
-        #ImageHandler.saveImage(
-        #    ImageHandler.addBoxToImage(ImageHandler.convertTensorToImage(x), y),
-        #    "image.png",
-        #    )
 
         return x, y
 
@@ -242,3 +239,48 @@ class NumberRecognition(Supervised):
         print("Accuracy: " + str(accuracy))
         self.saveAccuracy(accuracy)
 
+    def resizePrediction(self, prediction, shapeImage):
+        """
+        Method to resize prediction to original size
+
+        prediction : torchTensor -> [left, right, top, bottom]
+        shapeImage : Array -> channel, height, width
+
+        return torchTensor
+        """
+        predictionList = []
+
+        scaleFactorWidth = shapeImage[2]
+        scaleFactorHeight = shapeImage[1]
+
+        predictionList.append(prediction[0] * scaleFactorWidth)
+        predictionList.append(prediction[1] * scaleFactorWidth)
+        predictionList.append(prediction[2] * scaleFactorHeight)
+        predictionList.append(prediction[3] * scaleFactorHeight)
+
+        predictionResized = torch.tensor(predictionList)
+        return predictionResized.type(torch.IntTensor)
+
+    def predictBox(self, imagePath):
+        """
+        Method to predict box from image, saves png image with drawn box
+
+        imagePath : String
+        """
+        image = ImageHandler.convertImageToTensor(
+            ImageHandler.loadImage(imagePath)
+        )
+
+        x = functional.interpolate(image.unsqueeze(0), size=(self.targetWidth, self.targetHeight)).type(torch.FloatTensor)
+
+        normalization = self.__dataloader.getNormalizationParameters()
+        x = (x - normalization["average"]) / normalization["deviation"]
+
+        y = self.predict(x).squeeze(0)
+
+        y = self.resizePrediction(y, image.shape)
+
+        ImageHandler.saveImage(
+            ImageHandler.addBoxToImage(ImageHandler.convertTensorToImage(image), y),
+            "prediction.png",
+            )

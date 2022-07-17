@@ -1,6 +1,7 @@
 from typing import List
-from PIL import ImageDraw
+from PIL import ImageDraw, Image
 import torch
+import numpy as np
 from torchvision import transforms
 
 class ImageHandler(object):
@@ -13,7 +14,6 @@ class ImageHandler(object):
 
         tensor : tensor of dimensions 3 x width x height
         """
-        print(tensor.shape)
         transform = transforms.ToPILImage()
         return transform(tensor)
 
@@ -50,3 +50,25 @@ class ImageHandler(object):
         path: String
         """
         image.save(path, format=format)
+
+    def loadImage(path):
+        """
+        Static method to load PIL image from path
+
+        path : String
+        """
+        return Image.open(path)
+
+    def convertImageToTensor(image):
+        """
+        Static method to convert PIL image to torch tensor
+
+        image : PIL
+
+        return torchTensor (channels, heigth, width)
+        """
+        imageNp = np.asarray(image)
+        return torch.tensor(imageNp).permute(2,0,1)
+
+
+
