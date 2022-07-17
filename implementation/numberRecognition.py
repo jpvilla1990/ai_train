@@ -261,6 +261,19 @@ class NumberRecognition(Supervised):
         predictionResized = torch.tensor(predictionList)
         return predictionResized.type(torch.IntTensor)
 
+    def normalizeInput(self, input):
+        """
+        Method to normalize input
+
+        input : torchTensor -> (channel, heigth, width)
+
+        return torchTensor
+        """
+        x = functional.interpolate(input.unsqueeze(0), size=(self.targetWidth, self.targetHeight)).type(torch.FloatTensor)
+
+        normalization = self.__dataloader.getNormalizationParameters()
+        return (x - normalization["average"]) / normalization["deviation"]
+
     def predictBox(self, imagePath):
         """
         Method to predict box from image, saves png image with drawn box
@@ -271,10 +284,7 @@ class NumberRecognition(Supervised):
             ImageHandler.loadImage(imagePath)
         )
 
-        x = functional.interpolate(image.unsqueeze(0), size=(self.targetWidth, self.targetHeight)).type(torch.FloatTensor)
-
-        normalization = self.__dataloader.getNormalizationParameters()
-        x = (x - normalization["average"]) / normalization["deviation"]
+        x = self.normalizeInput(image)
 
         y = self.predict(x).squeeze(0)
 
