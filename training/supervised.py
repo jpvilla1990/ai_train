@@ -13,7 +13,7 @@ class Supervised(object):
 
         self.__parametersFolder = "parameters"
         self.reports = "reports"
-        self.__model = model
+        self.model = model
 
         self.__parametersName = "parameters.pth"
         self.__parametersNameBackUp = "parametersBackUp.pth"
@@ -30,7 +30,7 @@ class Supervised(object):
             }
         )
 
-    def __checkCuda(self, tensor, target="cuda"):
+    def checkCuda(self, tensor, target="cuda"):
         """
         Move tensor to cuda or cpu if available checking if cuda is available
 
@@ -76,7 +76,7 @@ class Supervised(object):
         """
         Method to save parameters from the model
         """
-        model = self.__checkCuda(model, target="cpu")
+        model = self.checkCuda(model, target="cpu")
         torch.save(model.state_dict(), self.__parametersFile)
         self.__counter += 1
         if self.__counter == self.__backUpCounter:
@@ -93,7 +93,7 @@ class Supervised(object):
             if os.path.exists(self.__parametersFileBackUp):
                 model.load_state_dict(torch.load(self.__parametersFileBackUp))
 
-        model = self.__checkCuda(model)
+        model = self.checkCuda(model)
 
         return model
 
@@ -109,7 +109,7 @@ class Supervised(object):
         batchSize : int
         """
         loss = loss
-        model = self.loadModel(self.__model)
+        model = self.loadModel(self.model)
         model.train()
         if optimizer == "adam":
             optim = torch.optim.Adam(model.parameters(), lr=learningRate)
@@ -117,8 +117,8 @@ class Supervised(object):
         while(True):
             optim.zero_grad()
             x, y, finished = self.customDataloader(batchSize, numberEpochs)
-            x = self.__checkCuda(x)
-            y = self.__checkCuda(y)
+            x = self.checkCuda(x)
+            y = self.checkCuda(y)
 
             prediction = model(x)
 
@@ -139,7 +139,7 @@ class Supervised(object):
         """
         Method to perform test
         """
-        model = self.loadModel(self.__model)
+        model = self.loadModel(self.model)
         model.eval()
 
         n = 0
@@ -147,8 +147,8 @@ class Supervised(object):
 
         while(True):
             x, y, finished = self.customDataloader(batchSize=1, numberEpochs=1, train=False)
-            x = self.__checkCuda(x)
-            y = self.__checkCuda(y)
+            x = self.checkCuda(x)
+            y = self.checkCuda(y)
 
             prediction = model(x)
 
@@ -168,9 +168,9 @@ class Supervised(object):
         """
         Method to perform a prediction with the trained model
         """
-        model = self.loadModel(self.__model)
+        model = self.loadModel(self.model)
         model.eval()
-        x = self.__checkCuda(x)
+        x = self.checkCuda(x)
 
         return model(x)
 

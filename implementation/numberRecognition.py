@@ -274,6 +274,29 @@ class NumberRecognition(Supervised):
         normalization = self.__dataloader.getNormalizationParameters()
         return (x - normalization["average"]) / normalization["deviation"]
 
+    def normalizeOutput(self, output, inputShape):
+        """
+        Method to normalize output
+
+        output : List -> [left, right, top, bottom]
+
+        return torchTensor
+        """
+        yList = []
+
+        scaleFactorWidth = self.targetWidth / inputShape[2]
+        scaleFactorHeight = self.targetHeight / inputShape[1]
+
+        yList.append(output[0] * scaleFactorWidth)
+        yList.append(output[1] * scaleFactorWidth)
+        yList.append(output[2] * scaleFactorHeight)
+        yList.append(output[3] * scaleFactorHeight)
+
+        y = torch.tensor(yList)
+        y = y / self.targetWidth
+
+        return y
+
     def predictBox(self, imagePath):
         """
         Method to predict box from image, saves png image with drawn box
@@ -290,7 +313,93 @@ class NumberRecognition(Supervised):
 
         y = self.resizePrediction(y, image.shape)
 
+        print(y)
+
         ImageHandler.saveImage(
             ImageHandler.addBoxToImage(ImageHandler.convertTensorToImage(image), y),
             "prediction.png",
             )
+
+    def deactivateTrainableLayers(self, nLayers):
+        """
+        Method to deactivate trainable layers for fine tunning
+
+        nLayers : int
+
+        return Model
+        """
+        model = self.loadModel(self.model)
+        n = 0
+        for param in model.parameters():
+            param.requires_grad = False
+            n += 1
+
+        counter = 0
+        for param in model.parameters():
+            if n - nLayers <= counter:
+                param.requires_grad = True
+            counter += 1
+
+        return model
+
+
+    def fineTune(self, imagesPath, coordinates, loss, optimizer="adam", learningRate=0.0000001, iterations=None, nLayers=2, threshold=0.8):
+        """
+        Method to fine tune last layers
+
+        imagesPath : String -> pathImages
+        coordinates : List -> [left, right, top, bottom]
+        loss :  torch.nn.Loss loss function
+        optimizer : String
+        learningRate : Float
+        iterations : int
+        nLayers : int
+        """
+        images = []
+        for i in range(len(imagesPath)):
+            image = ImageHandler.convertImageToTensor(
+                ImageHandler.loadImage(imagesPath[i])
+            )
+
+            xTensor = self.normalizeInput(image)
+            yTensor = self.normalizeOutput(coordinates[i], image.shape)
+
+            images.append(image)
+
+            if i == 0:
+                x = xTensor
+                y = yTensor.unsqueeze(0)
+            else:
+                x = torch.cat([x, xTensor])
+                y = torch.cat([y, yTensor.unsqueeze(0)])
+
+        model = self.deactivateTrainableLayers(nLayers)
+
+        model.train()
+        if optimizer == "adam":
+            optim = torch.optim.Adam(model.parameters(), lr=learningRate)
+
+        counter = 0
+        while(True):
+            optim.zero_grad()
+            x = self.checkCuda(x)
+            y = self.checkCuda(y)
+
+            prediction = model(x)
+
+            error = loss(prediction, y)
+            accuracy = self.calculateAccuracy(y, prediction)
+
+            error.backward()
+            optim.step()
+
+            self.saveModel(model)
+
+            print("Loss : " + str(error))
+            print("Accuracy : " + str(accuracy))
+
+            if counter == iterations:
+                break
+            if accuracy > threshold:
+                break
+            counter += 1
